@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Indecision Wheel</title>
+  <style>
+    /* ============================================================
+       FRUTIGER AERO ESTETİĞİ
+       Glossy, glassy, natural tones, light blues & greens, 
+       lens flares, soft gradients, aqua feel
+    ============================================================ */
+
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Comfortaa:wght@400;600;700&display=swap');
+
+    :root {
+      --aero-sky: #b8e4f9;
+      --aero-deep: #4db8e8;
+      --aero-glass: rgba(255,255,255,0.35);
+      --aero-glass-border: rgba(255,255,255,0.7);
+      --aero-green: #7dcf6e;
+      --aero-shadow: rgba(60,150,200,0.25);
+      --aero-text: #1a3a4a;
+      --aero-subtext: #3a6a82;
+      --panel-bg: rgba(255,255,255,0.28);
+      --btn-from: #6ecff6;
+      --btn-to: #2bb5e0;
+      --btn-green-from: #a8e063;
+      --btn-green-to: #56ab2f;
+      --btn-red-from: #f7b5a0;
+      --btn-red-to: #e05a3a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Quicksand', sans-serif;
+      color: var(--aero-text);
+      overflow-x: hidden;
+      /* Frutiger Aero arka plan: gökyüzü gradyanı */
+      background:
+        radial-gradient(ellipse at 20% 10%, rgba(180,230,255,0.7) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(140,210,130,0.4) 0%, transparent 50%),
+        linear-gradient(160deg, #c9eeff 0%, #a8dff5 30%, #d4f5c0 70%, #b8edd0 100%);
+      background-attachment: fixed;
+    }
+
+    /* Yüzen baloncuklar (aero dekor) */
+    .bubble {
+      position: fixed;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.7), rgba(120,200,255,0.2));
+      border: 1px solid rgba(255,255,255,0.6);
+      animation: floatBubble linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes floatBubble {
+      0%   { transform: translateY(110vh) scale(0.8); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 0.6; }
+      100% { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+    }
+
+    /* Güneş parlaması dekor */
+    .lens-flare {
+      position: fixed;
+      top: -60px; right: -60px;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(255,255,220,0.55) 0%, rgba(100,220,255,0.2) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+
+    .app-wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    /* Başlık */
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-family: 'Comfortaa', sans-serif;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #1a6ea0, #2ecbad, #56ab2f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    header p {
+      margin-top: 8px;
+      color: var(--aero-subtext);
+      font-size: 1rem;
+      font-weight: 600;
+      opacity: 0.85;
+    }
+
+    /* Ana grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    /* Sol panel: flex column to fill height */
+    .options-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Seçenek listesi paneli dolduracak şekilde büyüsün */
+    .options-panel #optionList {
+      flex: 1;
+      max-height: none;
+    }
+
+    @media (max-width: 720px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .wheel-section { order: -1; }
+      .options-panel #optionList { flex: none; max-height: 200px; }
+      .app-wrapper { padding: 16px 12px 40px; }
+      header { margin-bottom: 20px; }
+      header h1 { font-size: clamp(1.4rem, 7vw, 2rem); }
+      .glass-panel { padding: 18px 16px; }
+      .aero-btn { padding: 12px 18px; font-size: 1rem; min-height: 44px; }
+      .option-remove { padding: 4px 8px; font-size: 1.2rem; min-width: 32px; min-height: 32px; }
+      .btn-big { padding: 16px; font-size: 1.15rem; }
+      .input-row input { font-size: 16px; }
+    }
+
+    @media (max-width: 400px) {
+      .input-row { gap: 6px; }
+      .aero-btn { padding: 10px 12px; }
+    }
+
+    /* ============================================================
+       GLASS PANEL (Aero cam efekti)
+    ============================================================ */
+
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(18px) saturate(1.4);
+      -webkit-backdrop-filter: blur(18px) saturate(1.4);
+      border-radius: 20px;
+      border: 1.5px solid var(--aero-glass-border);
+      box-shadow:
+        0 8px 32px var(--aero-shadow),
+        inset 0 1px 0 rgba(255,255,255,0.8),
+        inset 0 -1px 0 rgba(100,180,220,0.2);
+      padding: 24px;
+    }
+
+    /* Panel başlık */
+    .panel-title {
+      font-family: 'Comfortaa', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--aero-subtext);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title::before {
+      content: '';
+      display: block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--aero-deep), var(--aero-green));
+      box-shadow: 0 0 6px rgba(78,184,232,0.6);
+    }
+
+    /* ============================================================
+       SEÇENEK GİRİŞ
+    ============================================================ */
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(78,184,232,0.5);
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(8px);
+      font-family: 'Quicksand', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--aero-text);
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+
+    .input-row input:focus {
+      border-color: var(--aero-deep);
+      box-shadow: 0 0 0 3px rgba(78,184,232,0.25);
+    }
+
+    .input-row input::placeholder { color: #8db8cc; font-weight: 400; }
+
+    /* ============================================================
+       BUTONLAR (Aero glossy stil)
+    ============================================================ */
+
+    .aero-btn {
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.7);
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+
+    .aero-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: rgba(255,255,255,0.4);
+      border-radius: 12px 12px 0 0;
+      pointer-events: none;
+    }
+
+    .aero-btn:hover  { transform: translateY(-2px); }
+    .aero-btn:active { transform: translateY(0px); }
+
+    .btn-blue {
+      background: linear-gradient(180deg, var(--btn-from), var(--btn-to));
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,80,140,0.4);
+      box-shadow: 0 4px 12px rgba(43,181,224,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+
+    .btn-green {
+      background: linear-gradient(180deg, var(--btn-green-from), var(--btn-green-to));
+      color: white;
+      text-shadow: 0 1px 2px rgba(30,80,10,0.4);
+      box-shadow: 0 4px 12px rgba(86,171,47,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+
+    .btn-red {
+      background: linear-gradient(180deg, var(--btn-red-from), var(--btn-red-to));
+      color: white;
+      text-shadow: 0 1px 2px rgba(100,20,10,0.35);
+      box-shadow: 0 4px 12px rgba(224,90,58,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+
+    .btn-big {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      border-radius: 16px;
+      margin-top: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ============================================================
+       SEÇENEK LİSTESİ
+    ============================================================ */
+
+    #optionList {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    #optionList::-webkit-scrollbar { width: 5px; }
+    #optionList::-webkit-scrollbar-track { background: transparent; }
+    #optionList::-webkit-scrollbar-thumb { background: rgba(78,184,232,0.4); border-radius: 10px; }
+
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.7);
+      font-weight: 700;
+      font-size: 0.9rem;
+      animation: slideIn 0.3s ease;
+      transition: background 0.2s;
+    }
+
+    .option-item:hover { background: rgba(255,255,255,0.75); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-14px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .option-color-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1.5px solid rgba(255,255,255,0.8);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    .option-label { flex: 1; }
+
+    .option-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #c0392b;
+      font-size: 1.1rem;
+      font-weight: 900;
+      line-height: 1;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+      padding: 0 4px;
+    }
+
+    .option-remove:hover { opacity: 1; }
+
+    .empty-hint {
+      text-align: center;
+      color: #8db8cc;
+      font-size: 0.88rem;
+      padding: 20px 0;
+    }
+
+    /* Sıfırla butonu satırı */
+    .reset-row {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* ============================================================
+       ÇARK ALANI
+    ============================================================ */
+
+    .wheel-section { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+    /* Ok işareti (pointer) */
+    .wheel-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #wheelCanvas {
+      display: block;
+      border-radius: 50%;
+      box-shadow:
+        0 8px 40px rgba(40,130,190,0.3),
+        0 2px 8px rgba(40,130,190,0.2),
+        inset 0 0 0 4px rgba(255,255,255,0.4);
+      transition: box-shadow 0.3s;
+    }
+
+    /* Çark dönerken parlar */
+    #wheelCanvas.spinning {
+      box-shadow:
+        0 8px 60px rgba(40,200,250,0.5),
+        0 0 30px rgba(80,220,180,0.3),
+        inset 0 0 0 4px rgba(255,255,255,0.5);
+    }
+
+    /* Sabit ok işareti */
+    .pointer {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-top: 32px solid #e05a3a;
+      filter: drop-shadow(0 3px 6px rgba(200,80,50,0.5));
+      z-index: 10;
+    }
+
+    .pointer::after {
+      content: '';
+      position: absolute;
+      top: -34px; left: 50%;
+      transform: translateX(-50%);
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #e8856e;
+    }
+
+    /* ============================================================
+       SONUÇ KUTUSU
+    ============================================================ */
+
+    #resultBox {
+      width: 100%;
+      text-align: center;
+      padding: 16px 20px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.55), rgba(180,240,220,0.4));
+      border: 2px solid rgba(255,255,255,0.8);
+      box-shadow: 0 6px 24px rgba(40,180,140,0.2);
+      display: none;
+    }
+
+    #resultBox.show {
+      display: block;
+      animation: resultPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    @keyframes resultPop {
+      from { transform: scale(0.7) translateY(20px); opacity: 0; }
+      to   { transform: scale(1) translateY(0);      opacity: 1; }
+    }
+
+    #resultBox .result-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--aero-subtext);
+      opacity: 0.8;
+    }
+
+    #resultBox .result-text {
+      font-family: 'Comfortaa', sans-serif;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #1a7a40, #1a6ea0, #56ab2f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-top: 4px;
+      line-height: 1.2;
+    }
+
+    /* ============================================================
+       RENK PALETİ (Frutiger Aero uyumlu)
+    ============================================================ */
+
+  </style>
+</head>
+<body>
+
+  <!-- Dekoratif lens flare -->
+  <div class="lens-flare"></div>
+
+  <!-- Yüzen baloncuklar (JS ile oluşturulacak) -->
+
+  <div class="app-wrapper">
+
+    <!-- Başlık -->
+    <header>
+      <h1>Indecision Wheel</h1>
+    </header>
+
+    <div class="main-grid">
+
+      <!-- ====================================================
+           LEFT PANEL: Option Management
+      ==================================================== -->
+      <div class="glass-panel options-panel">
+        <div class="panel-title">Options</div>
+
+        <!-- Input row -->
+        <div class="input-row">
+          <input
+            type="text"
+            id="optionInput"
+            placeholder="Type an option…"
+            maxlength="40"
+          />
+          <button class="aero-btn btn-blue" onclick="addOption()">Add</button>
+        </div>
+
+        <!-- Option list -->
+        <ul id="optionList"></ul>
+
+        <!-- Reset -->
+        <div class="reset-row">
+          <button class="aero-btn btn-red" onclick="resetAll()">Reset</button>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           RIGHT PANEL: Wheel
+      ==================================================== -->
+      <div class="glass-panel wheel-section">
+        <div class="panel-title">Wheel</div>
+
+        <!-- Wheel + pointer -->
+        <div class="wheel-container">
+          <div class="pointer"></div>
+          <canvas id="wheelCanvas" width="380" height="380"></canvas>
+        </div>
+
+        <!-- Spin button -->
+        <button class="aero-btn btn-green btn-big" id="spinBtn" onclick="spinWheel()">
+          Spin
+        </button>
+
+        <!-- Result box -->
+        <div id="resultBox">
+          <div class="result-label">Selected</div>
+          <div class="result-text" id="resultText"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================
+       BÖLÜM 1 — VERİ & RENK PALETİ
+    ============================================================ */
+
+    // Frutiger Aero uyumlu canlı dilim renkleri
+    const COLORS = [
+      '#4db8e8', // açık mavi
+      '#7dcf6e', // yeşil
+      '#f7a541', // turuncu
+      '#e05a8a', // pembe
+      '#6ecff6', // açık cyan
+      '#a8e063', // açık yeşil
+      '#f7c948', // sarı
+      '#7b7fd4', // mor
+      '#e08a5a', // terra
+      '#56d0c8', // turkuaz
+      '#e05a3a', // kırmızı-turuncu
+      '#adc5ff', // lavanta
+    ];
+
+    // Seçenekler dizisi: { label, color }
+    let options = [];
+
+    /* ============================================================
+       BÖLÜM 2 — DOM İŞLEMLERİ
+    ============================================================ */
+
+    const input      = document.getElementById('optionInput');
+    const listEl     = document.getElementById('optionList');
+    const canvas     = document.getElementById('wheelCanvas');
+    const ctx        = canvas.getContext('2d');
+    const spinBtn    = document.getElementById('spinBtn');
+    const resultBox  = document.getElementById('resultBox');
+    const resultText = document.getElementById('resultText');
+
+    // Enter tuşu ile ekleme
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') addOption();
+    });
+
+    /** Seçenek ekle */
+    function addOption() {
+      const label = input.value.trim();
+      if (!label) return;
+
+      const color = COLORS[options.length % COLORS.length];
+      options.push({ label, color });
+
+      input.value = '';
+      input.focus();
+
+      renderList();
+      drawWheel();
+    }
+
+    /** Seçenek sil */
+    function removeOption(index) {
+      options.splice(index, 1);
+      renderList();
+      drawWheel();
+      resultBox.classList.remove('show');
+    }
+
+    /** Reset everything */
+    function resetAll() {
+      options = [];
+      currentAngle = -Math.PI / 2;
+      renderList();
+      drawWheel();
+      resultBox.classList.remove('show');
+    }
+
+    /** Re-render the option list */
+    function renderList() {
+      if (options.length === 0) {
+        listEl.innerHTML = '<li class="empty-hint">No options yet. Add some above.</li>';
+        return;
+      }
+
+      listEl.innerHTML = options.map((opt, i) => `
+        <li class="option-item">
+          <span class="option-color-dot" style="background:${opt.color}"></span>
+          <span class="option-label">${escapeHtml(opt.label)}</span>
+          <button class="option-remove" onclick="removeOption(${i})" title="Remove">✕</button>
+        </li>
+      `).join('');
+    }
+
+    /** XSS önlemi */
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[c]));
+    }
+
+    /* ============================================================
+       BÖLÜM 3 — ÇARK ÇİZİM FONKSİYONU
+    ============================================================ */
+
+    let currentAngle = -Math.PI / 2; // Çark 12 saatten başlar (yukarıdan)
+
+    /** Draw the wheel */
+    function drawWheel(rotationAngle = currentAngle) {
+      const W = canvas.width;
+      const cx = W / 2;
+      const cy = W / 2;
+      const radius = W / 2 - 6;
+
+      ctx.clearRect(0, 0, W, W);
+
+      if (options.length === 0) {
+        drawEmptyWheel(cx, cy, radius);
+        return;
+      }
+
+      const sliceAngle = (2 * Math.PI) / options.length;
+
+      options.forEach((opt, i) => {
+        const startAngle = rotationAngle + i * sliceAngle;
+        const endAngle   = startAngle + sliceAngle;
+        const midAngle   = startAngle + sliceAngle / 2;
+
+        /* --- Slice fill --- */
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = opt.color;
+        ctx.fill();
+
+        /* --- Slice border --- */
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        /* --- Glossy overlay --- */
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, endAngle);
+        ctx.closePath();
+        const glossGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        glossGrad.addColorStop(0,   'rgba(255,255,255,0.35)');
+        glossGrad.addColorStop(0.5, 'rgba(255,255,255,0.08)');
+        glossGrad.addColorStop(1,   'rgba(255,255,255,0)');
+        ctx.fillStyle = glossGrad;
+        ctx.fill();
+        ctx.restore();
+
+        /* --- Label text ---
+           Strateji: Dilimin orta açısına döndür.
+           Metin her zaman merkzeden dışarıya doğru (soldan sağa) okunacak şekilde:
+           - Koordinat sistemini merkeze taşı
+           - midAngle kadar döndür (bu noktada +X ekseni dilim ortasına bakıyor)
+           - Metin şimdi +X yönünde, merkezden dışa doğru, düzgün okunuyor
+           Flip gerekmez çünkü textAlign:'left' + pozitif x her zaman dışa doğru yazar.
+        */
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(midAngle);
+
+        const innerPad = 28;       // merkeze yakın boşluk (centre dot için)
+        const outerPad = 14;       // dış kenara boşluk
+        const textZone = radius - innerPad - outerPad;
+
+        let fontSize = Math.min(13, textZone / Math.max(opt.label.length * 0.6, 4));
+        fontSize = Math.max(8, fontSize);
+
+        ctx.font = `700 ${fontSize}px 'Quicksand', sans-serif`;
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 3;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+
+        // Metni kırp: textZone'a sığacak şekilde
+        let label = opt.label;
+        while (ctx.measureText(label).width > textZone && label.length > 2) {
+          label = label.slice(0, -1);
+        }
+        if (label.length < opt.label.length) label = label.slice(0, -1) + '…';
+
+        ctx.fillText(label, innerPad, 0);
+        ctx.restore();
+      });
+
+      drawCenter(cx, cy);
+    }
+
+    /** Merkez parlak daire */
+    function drawCenter(cx, cy) {
+      const r = 20;
+      const grad = ctx.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, r);
+      grad.addColorStop(0,   '#ffffff');
+      grad.addColorStop(0.4, '#d4f0fc');
+      grad.addColorStop(1,   '#7ccce8');
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      ctx.fillStyle = grad;
+      ctx.shadowColor = 'rgba(40,130,190,0.5)';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    /** Empty wheel placeholder — clean circle, no text */
+    function drawEmptyWheel(cx, cy, r) {
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0,   'rgba(200,240,255,0.5)');
+      grad.addColorStop(1,   'rgba(120,200,240,0.2)');
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Dashed border ring
+      ctx.save();
+      ctx.setLineDash([10, 6]);
+      ctx.strokeStyle = 'rgba(78,184,232,0.35)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      drawCenter(cx, cy);
+    }
+
+    /* ============================================================
+       BÖLÜM 4 — ANİMASYON FONKSİYONU
+    ============================================================ */
+
+    let isSpinning   = false;
+    let angularSpeed = 0;   // anlık açısal hız (rad/frame)
+    let friction     = 0;   // yavaşlama katsayısı
+
+    /** Çarkı döndür */
+    function spinWheel() {
+      if (isSpinning || options.length < 2) {
+        if (options.length < 2) alert('Please add at least 2 options!');
+        return;
+      }
+
+      // Sonucu gizle
+      resultBox.classList.remove('show');
+      canvas.classList.add('spinning');
+
+      isSpinning = true;
+      spinBtn.disabled = true;
+      lastTickSlice = -1; // Tık takibini sıfırla
+
+      // Başlangıç açısal hızı: yüksek rastgele değer (5–10 tam tur eşdeğeri/sn)
+      angularSpeed = (Math.random() * 0.15 + 0.18);
+
+      // Ek hedef açı: rastgele + tam dönüşler
+      // Görsel doğallık için fazladan 5–10 tur + rastgele offset ekle
+      const extraSpins  = (Math.floor(Math.random() * 6) + 5) * 2 * Math.PI;
+      const randomStop  = Math.random() * 2 * Math.PI;
+      const targetAngle = currentAngle + extraSpins + randomStop;
+
+      // Friction: hedef açıya göre hesapla — ease-out etkisi
+      // requestAnimationFrame tabanlı smooth animasyon
+      animateWheel(targetAngle);
+    }
+
+    /** requestAnimationFrame döngüsü */
+    function animateWheel(targetAngle) {
+      // Kalan mesafe
+      const remaining = targetAngle - currentAngle;
+
+      if (remaining <= 0.001) {
+        // Animasyon bitti
+        isSpinning = false;
+        spinBtn.disabled = false;
+        canvas.classList.remove('spinning');
+        currentAngle = targetAngle % (2 * Math.PI);
+        drawWheel(currentAngle);
+        playFinish();   // Bitiş melodisi
+        showResult();
+        return;
+      }
+
+      // Ease-out: kalan mesafeye göre hız düşür
+      // friction dinamik — sona doğru yavaşlama artar
+      const speed = Math.max(0.002, remaining * 0.03);
+      currentAngle += speed;
+
+      checkAndPlayTick(speed); // Dilim geçişinde tık sesi
+
+      drawWheel(currentAngle);
+      requestAnimationFrame(() => animateWheel(targetAngle));
+    }
+
+    /* ============================================================
+       BÖLÜM 5 — SONUÇ HESAPLAMA FONKSİYONU
+    ============================================================ */
+
+    /** Determine which slice the pointer (top, 12 o'clock) is pointing at */
+    function showResult() {
+      const sliceAngle = (2 * Math.PI) / options.length;
+
+      // The pointer is fixed at the top (–π/2 in canvas coords = 270°).
+      // We need to find which slice occupies that position given currentAngle.
+      // Relative angle of pointer in the wheel's local frame:
+      //   pointerLocal = (–π/2 – currentAngle) mod 2π
+      // Then add π/2 to re-align because our wheel starts at –π/2.
+      let pointerLocal = ((-Math.PI / 2 - currentAngle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+
+      const selectedIndex = Math.floor(pointerLocal / sliceAngle) % options.length;
+      const selected = options[selectedIndex];
+
+      resultText.textContent = selected.label;
+      resultText.style.background = `linear-gradient(135deg, ${selected.color}, #1a6ea0)`;
+      resultText.style.webkitBackgroundClip = 'text';
+      resultText.style.webkitTextFillColor = 'transparent';
+      resultText.style.backgroundClip = 'text';
+
+      resultBox.classList.remove('show');
+      void resultBox.offsetWidth;
+      resultBox.classList.add('show');
+    }
+
+    /* ============================================================
+       BÖLÜM 6 — SES EFEKTLERİ (Web Audio API)
+    ============================================================ */
+
+    // AudioContext'i kullanıcı etkileşimi sonrasında başlat (tarayıcı politikası)
+    let audioCtx = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // Suspended durumdaysa resume et (iOS Safari için kritik)
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    /**
+     * Tık sesi: kısa bir "tick" — çark bir dilim geçerken çalınır
+     * Frekansı dönüş hızına göre değişir (hızlı dönüşte yüksek pitch)
+     */
+    function playTick(speed) {
+      const ac = getAudioCtx();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+
+      osc.connect(gain);
+      gain.connect(ac.destination);
+
+      // Hıza göre frekans: yavaş = düşük, hızlı = yüksek
+      osc.frequency.value = 300 + speed * 1800;
+      osc.type = 'triangle';
+
+      const now = ac.currentTime;
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+      osc.start(now);
+      osc.stop(now + 0.04);
+    }
+
+    /**
+     * Bitiş sesi: çark durduğunda çalınan küçük "ding" melodisi
+     */
+    function playFinish() {
+      const ac = getAudioCtx();
+      const notes = [523, 659, 784]; // C5, E5, G5 — majör akoru
+
+      notes.forEach((freq, i) => {
+        const osc  = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.connect(gain);
+        gain.connect(ac.destination);
+
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+
+        const startTime = ac.currentTime + i * 0.12;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.25, startTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.5);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.5);
+      });
+    }
+
+    // Tık sesi için dilim geçiş takibi
+    let lastTickSlice = -1;
+
+    /**
+     * Animasyon döngüsünde her dilim geçişinde tık çal
+     * Hangi dilimde olduğumuzu hesapla, değiştiyse ses çal
+     */
+    function checkAndPlayTick(speed) {
+      if (options.length === 0) return;
+      const sliceAngle = (2 * Math.PI) / options.length;
+      const normalized = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const currentSlice = Math.floor(normalized / sliceAngle);
+
+      if (currentSlice !== lastTickSlice) {
+        lastTickSlice = currentSlice;
+        playTick(speed);
+      }
+    }
+
+    /* ============================================================
+       BÖLÜM 7 — BALONCUKLAR & BAŞLANGIÇ
+    ============================================================ */
+
+    /** Yüzen baloncuk oluştur (Frutiger Aero dekor) */
+    function createBubbles() {
+      const count = 8;
+      for (let i = 0; i < count; i++) {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        const size = Math.random() * 60 + 20;
+        b.style.cssText = `
+          width: ${size}px;
+          height: ${size}px;
+          left: ${Math.random() * 100}vw;
+          animation-duration: ${Math.random() * 12 + 10}s;
+          animation-delay: ${Math.random() * -15}s;
+          opacity: ${Math.random() * 0.4 + 0.1};
+        `;
+        document.body.appendChild(b);
+      }
+    }
+
+    // Canvas boyutunu responsive yap
+    function resizeCanvas() {
+      // Mobilde padding'i hesaba kat (32px her iki yanda)
+      const maxW = Math.min(380, window.innerWidth - 64);
+      canvas.width  = maxW;
+      canvas.height = maxW;
+      drawWheel();
+    }
+
+    // Startup
+    createBubbles();
+    resizeCanvas();
+    renderList(); // Show initial empty state
+    window.addEventListener('resize', resizeCanvas);
+  </script>
+</body>
+</html>
